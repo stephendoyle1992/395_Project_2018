@@ -281,7 +281,7 @@ func blockChanges(tb *TimeBlock, isUpdate bool) error {
 			}
 		}
 	}
-	if isUpdate && msg.Start.Format(layout) != tb.Start.Format(layout) && msg.End.Format(layout) != tb.End.Format(layout) {
+	if !isUpdate || (isUpdate && msg.Start.Format(layout) != tb.Start.Format(layout) && msg.End.Format(layout) != tb.End.Format(layout)) {
 		{
 			msgID, err = createNewMessage(tx, msg, change)
 			if err != nil {
