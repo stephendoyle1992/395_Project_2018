@@ -953,6 +953,6 @@ function loadEditPassword(e) {
         document.querySelector("#cancel").addEventListener('click', userList);
         document.querySelector("#submit").addEventListener('click', submitPassword);
     });
-    xhttp.open("GET", `/api/v1/admin/users?u=${userID}`);
+    xhttp.open("GET", `/api/v1/admin/users/${userID}`);
     xhttp.send();
 }
