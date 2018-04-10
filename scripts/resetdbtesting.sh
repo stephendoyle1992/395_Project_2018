@@ -6,4 +6,3 @@
 echo "DROP DATABASE caraway" | psql postgres
 psql postgres < ../database/dbinit.sql
 psql caraway  < ../database/data.sql
-psql caraway  < ../database/bookingdata.sql

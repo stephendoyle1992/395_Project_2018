@@ -25,6 +25,7 @@
 
 
 <script id="newNotification_tmpl" type="x-dot-template">
+<div class="container-fluid">
     <div class="form-group">
         <p style="text-align: left;">Select Users:</p>
         <select multiple="multiple" id="parent-select" name="parent-select[]"> </select> 
@@ -34,11 +35,12 @@
         <br><br> 
         <button id="submit" type="button" class="btn btn-primary">Send</button>  
     </div>
+     </div>
 </script>
 
 
 <script id="Notification_tmpl" type="x-dot-template">
-    <div id="notification_box" style="float:left;overflow-y: auto;width: 100%;">
+    <div id="notification_box" style="float:left;overflow-y: auto;width: 100%;height:587.383; ">
         {{`{{~it :value:index}}`}}
                 <div class="alert alert-dark alert-dismissible fade show" role="alert">
                     <div class="col-10">

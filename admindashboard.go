@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -83,9 +84,10 @@ type AdminMessages struct {
 }
 
 func createAdminNotification(w http.ResponseWriter, r *http.Request) {
-	msg := newMessage{}
+	var msg newMessage
 	decoder := json.NewDecoder(r.Body)
 	decoder.Decode(&msg)
+	logger.Println(msg)
 	tx, err := db.Begin()
 	if err != nil {
 		logger.Println(err)
@@ -123,7 +125,7 @@ func createAdminNotification(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAdminNotification(w http.ResponseWriter, r *http.Request) {
-	q := `select n.msg_id, n.msg, r.read, t.total 
+	q := `select distinct n.msg_id, n.msg, r.read, t.total 
 			from notifications n, 
 				(select msg_id, count(user_id) as total 
 					from notify 
@@ -131,7 +133,7 @@ func getAdminNotification(w http.ResponseWriter, r *http.Request) {
 				(select msg_id, count(user_id) filter (where viewed = '1') as read 
 					from notify 
 					group by msg_id) r 
-			where n.msg_id = r.msg_id AND n.msg_id = r.msg_id;`
+			where n.msg_id = r.msg_id AND n.msg_id = t.msg_id AND admincreated='1';`
 	msgs := []AdminMessages{}
 	err := db.Select(&msgs, q)
 	if err != nil {
@@ -410,6 +412,16 @@ func getSingleUser(w http.ResponseWriter, r *http.Request) {
 	encoder.Encode(user)
 }
 
+//this was taken from a CMPT315 Lab
+//credit to Dr. Boers
+func isUniqueViolation(err error) bool {
+	if err, ok := err.(*pq.Error); ok {
+		return err.Code == "23505"
+	}
+
+	return false
+}
+
 func createUser(w http.ResponseWriter, r *http.Request) {
 	newUser := userFull{}
 	decoder := json.NewDecoder(r.Body)
@@ -429,8 +441,14 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		newUser.FirstName, newUser.LastName, newUser.Email, newUser.Phone,
 		newUser.BonusHours, newUser.BonusNote)
 	if err != nil {
+		if isUniqueViolation(err) {
+			logger.Println(err)
+			http.Error(w, "User already exists", http.StatusBadRequest)
+			return
+		}
 		logger.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
+		errString := fmt.Sprintf("%s", err)
+		http.Error(w, errString, http.StatusBadRequest)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -812,9 +830,9 @@ func loadAdminCalendar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s := tmpls.Lookup("admincalendar.tmpl")
-	pg.Calendar 	 = true
-	pg.DotJS 		 = true
-	pg.Toaster 		 = true
+	pg.Calendar = true
+	pg.DotJS = true
+	pg.Toaster = true
 	s.ExecuteTemplate(w, "admincalendar", pg)
 }
 
@@ -863,8 +881,8 @@ func loadAdminScheduleBuilder(w http.ResponseWriter, r *http.Request) {
 	}
 	s := tmpls.Lookup("admincalendar.tmpl")
 	// calendar dependency flag
-	pg.Calendar 	 = true
-	pg.DotJS 		 = true
-	pg.Toaster 		 = true
+	pg.Calendar = true
+	pg.DotJS = true
+	pg.Toaster = true
 	s.ExecuteTemplate(w, "admincalendar", pg)
 }

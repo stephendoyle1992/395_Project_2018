@@ -7,10 +7,11 @@ import (
 
 	"database/sql"
 
-	"github.com/jmoiron/sqlx"
-	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 	"encoding/json"
+
+	"github.com/gorilla/mux"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 /* TimeBlock ...
@@ -258,7 +259,8 @@ func blockChanges(tb *TimeBlock, isUpdate bool) error {
 			return err
 		}
 	}
-	{
+	const layout = "Jan 2, 2006 at 3:04pm"
+	if isUpdate && msg.Start.Format(layout) != tb.Start.Format(layout) && msg.End.Format(layout) != tb.End.Format(layout) {
 		err = deleteExistingBookings(tx, tb.ID)
 		if err != nil {
 			return err
@@ -279,18 +281,20 @@ func blockChanges(tb *TimeBlock, isUpdate bool) error {
 			}
 		}
 	}
-	{
-		msgID, err = createNewMessage(tx, msg, change)
-		if err != nil {
-			return err
-		}
-	}
-	for _, u := range usrs {
+	if !isUpdate || (isUpdate && msg.Start.Format(layout) != tb.Start.Format(layout) && msg.End.Format(layout) != tb.End.Format(layout)) {
 		{
-			err = createMessageForUsers(tx, u, msgID)
+			msgID, err = createNewMessage(tx, msg, change)
 			if err != nil {
-				logger.Println(err)
 				return err
+			}
+		}
+		for _, u := range usrs {
+			{
+				err = createMessageForUsers(tx, u, msgID)
+				if err != nil {
+					logger.Println(err)
+					return err
+				}
 			}
 		}
 	}
@@ -345,10 +349,10 @@ const (
 )
 
 type IntervalData struct {
-	Repeats int			`json:"repeatType"` // See constant declarations above
-	Delta   int 		`json:"primaryDelta"`// e.g. 2 ==> every 2nd week/month, 1 == every week/month, 3 == every 3rd week/month
+	Repeats int `json:"repeatType"`   // See constant declarations above
+	Delta   int `json:"primaryDelta"` // e.g. 2 ==> every 2nd week/month, 1 == every week/month, 3 == every 3rd week/month
 	// SubDelta may b eused for monthly repeaters
-	secondaryDeltas []int `json:"secondaryDeltas"`// E.g. Every 2nd monday (on a 2nd month Delta) --> 2nd monday of every 2nd month;; is a slice to allow for things like (1, 3) --> 1st and 3rd Day of DeltaREpeatingMonth
+	secondaryDeltas []int `json:"secondaryDeltas"` // E.g. Every 2nd monday (on a 2nd month Delta) --> 2nd monday of every 2nd month;; is a slice to allow for things like (1, 3) --> 1st and 3rd Day of DeltaREpeatingMonth
 }
 
 /*
@@ -360,12 +364,12 @@ type BuilderEvent struct {
 }
 
 // Advance by major delta (e.g. next month)
-func (be BuilderEvent) Increment() (BuilderEvent) {
+func (be BuilderEvent) Increment() BuilderEvent {
 	logger.Println("++: ", be)
 	switch be.Interval.Repeats {
 	case WEEKLY:
-		be.Start = be.Start.AddDate(0, 0, 7 * be.Interval.Delta)
-		be.End = be.End.AddDate(0, 0, 7 * be.Interval.Delta)
+		be.Start = be.Start.AddDate(0, 0, 7*be.Interval.Delta)
+		be.End = be.End.AddDate(0, 0, 7*be.Interval.Delta)
 	case MONTHLY:
 		be.Start = be.Start.AddDate(0, be.Interval.Delta, 0)
 		be.End = be.End.AddDate(0, be.Interval.Delta, 0)
@@ -431,9 +435,9 @@ func buildRequestHandler(w http.ResponseWriter, r *http.Request) {
 	// our building algorithm will increment by week until period is hit
 	bdRoomMap := make(map[string][]BuilderEvent)
 	for _, e := range builderData.Events {
-		e.Start = time.Date(builderData.PeriodStart.Year(), builderData.PeriodStart.Month() - 1, e.Start.Day(), e.Start.Hour(), e.Start.Minute(), 0, 0, time.Local)
-		e.End = time.Date(builderData.PeriodStart.Year(), builderData.PeriodStart.Month() - 1, e.End.Day(), e.End.Hour(), e.End.Minute(),0, 0, time.Local) // builder sets utcOffset to 0
-		bdRoomMap[e.Room] = append(bdRoomMap[e.Room], e) // Split up by rooms (can be parallelized)
+		e.Start = time.Date(builderData.PeriodStart.Year(), builderData.PeriodStart.Month()-1, e.Start.Day(), e.Start.Hour(), e.Start.Minute(), 0, 0, time.Local)
+		e.End = time.Date(builderData.PeriodStart.Year(), builderData.PeriodStart.Month()-1, e.End.Day(), e.End.Hour(), e.End.Minute(), 0, 0, time.Local) // builder sets utcOffset to 0
+		bdRoomMap[e.Room] = append(bdRoomMap[e.Room], e)                                                                                                  // Split up by rooms (can be parallelized)
 	}
 
 	/*
@@ -447,7 +451,7 @@ func buildRequestHandler(w http.ResponseWriter, r *http.Request) {
 		BuildSchedule(evs, builderData.PeriodStart, builderData.PeriodEnd)
 	}
 
-	rr := &Response{Msg: "whew!",}
+	rr := &Response{Msg: "whew!"}
 	rr.send(w)
 	return
 }
@@ -458,8 +462,8 @@ func BuildSchedule(evs []BuilderEvent, sop, eop time.Time) {
 		// Before start of period (period starts  mid week for example), add weeks until in ranger
 		for be.Start.Before(sop) {
 			// dun dun dun duh duuuuuuuuun de da da dun de da dooo da da bump ba bum bah da (*james bond theme plays*)
-			be.Start = be.Start.AddDate(0,0,7)
-			be.End = be.End.AddDate(0,0,7)
+			be.Start = be.Start.AddDate(0, 0, 7)
+			be.End = be.End.AddDate(0, 0, 7)
 		}
 
 		for be.Start.Before(eop) { // event in range --> add it to calendar and increment
@@ -479,10 +483,10 @@ func BuildSchedule(evs []BuilderEvent, sop, eop time.Time) {
 				logger.Println("MONTHLY: ", be)
 				for _, i := range be.Interval.secondaryDeltas { // For each sub delta value --> add events to calendar for the month
 					subEv := be
-					subEv.Start = subEv.Start.AddDate(0, 0, 7 * i)         // add subDelta to start/end
-					subEv.End = subEv.End.AddDate(0, 0, 7 * i)
-					if subEv.Start.Before(eop) {             // if still in range add, else continue (no guarentee list is sorted, must keep going!)
-						_, err := subEv.add()           // Add the event if still in range
+					subEv.Start = subEv.Start.AddDate(0, 0, 7*i) // add subDelta to start/end
+					subEv.End = subEv.End.AddDate(0, 0, 7*i)
+					if subEv.Start.Before(eop) { // if still in range add, else continue (no guarentee list is sorted, must keep going!)
+						_, err := subEv.add() // Add the event if still in range
 						if err != nil {
 							logger.Println(err)
 						}
@@ -496,4 +500,3 @@ func BuildSchedule(evs []BuilderEvent, sop, eop time.Time) {
 		}
 	}
 }
-

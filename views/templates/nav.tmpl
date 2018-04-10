@@ -1,7 +1,7 @@
 {{define "nav"}}
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
-            <a class="navbar-brand" {{if eq .Role "Admin"}}href="/admin/dashboard" {{else if eq .Role "Teacher"}}href="/teacher" {{else}}href="/dashboard"{{end}}>Caraway Volunteering</a>
+            <a class="navbar-brand" {{if eq .Role "Admin"}}href="/admin/dashboard" {{else if eq .Role "Teacher"}}href="/teacher" {{else}}href="/dashboard"{{end}}>Caraway Facilitation</a>
 {{if and (ne .PageName "login") (ne .PageName "mainLogin")}}
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation" style="">
                 <span class="navbar-toggler-icon"></span>
