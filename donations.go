@@ -107,7 +107,8 @@ func (d *Donation) isLegal() (legal bool, err error) {
 	fd := new(FamilyData)
 	fd.init(family, time.Now())
 	hrs, err := fd.GetAvailableHours()
-	return hrs > fd.HoursGoal, err
+	logger.Println(hrs, fd.HoursGoal)
+	return d.Amount <= hrs, err
 }
 
 // save donation in db, update with returned id
