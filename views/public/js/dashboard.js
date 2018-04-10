@@ -200,11 +200,21 @@ $(document).ready(function() {
     });
 });
 
-function refreshGauge(gauge, parentID, newValue) {
+function refreshGauge(gauge, parentID, newValue, goal) {
     gauge.set(newValue);
     // setup the text
     element = document.getElementById(parentID + "-text");
-    element.innerHTML = "<h3>" + newValue + "h</h3>";
+    if (newValue < goal) {
+        if ((newValue / goal) < 0.5) {
+            element.innerHTML = "<h3 class='text-danger'>" + newValue + "h</h3>";
+        } else {
+            element.innerHTML = "<h3 class='text-warning'>" + newValue + "h</h3>";
+        }
+
+    } else {
+        element.innerHTML = "<h3 class='text-success'>" + newValue + "h</h3>";
+    }
+
 }
 
 
@@ -217,8 +227,8 @@ function refreshWidgets() {
         contentType:'json',
         data: data,
         success: function(data) {
-            refreshGauge(elems.gDone, "hoursDone", data.hoursDone);
-            refreshGauge(elems.gBooked, "hoursBooked", data.hoursBooked);
+            refreshGauge(elems.gDone, "hoursDone", data.hoursDone, data.hoursGoal);
+            refreshGauge(elems.gBooked, "hoursBooked", data.hoursBooked, data.hoursGoal);
             elems.chart.data.datasets[0] = data.history1;
             elems.chart.data.datasets[1] = data.history2;
             elems.chart.update();
